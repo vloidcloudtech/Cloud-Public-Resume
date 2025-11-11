@@ -4,7 +4,7 @@ function HomePage() {
   return (
     <div className="fade-in">
       <div className="hero">
-        <h1 className="hero-title">Welcome to My Portfolio</h1>
+        <h1 className="hero-title">Welcome to My Digital Learning Path</h1>
         <p className="hero-subtitle">
           Automatically aggregated from GitHub, Medium, and YouTube
         </p>

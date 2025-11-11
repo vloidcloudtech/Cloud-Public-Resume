@@ -13,10 +13,10 @@
 # Required GitHub Secrets (configure in repo settings → Secrets and variables → Actions):
 #   - AWS_ACCESS_KEY_ID: AWS IAM user access key
 #   - AWS_SECRET_ACCESS_KEY: AWS IAM user secret key
-#   - GITHUB_TOKEN_PAT: GitHub Personal Access Token (repo:read scope)
+#   - GH_PERSONAL_ACCESS_TOKEN: GitHub Personal Access Token (repo:read scope)
 #   - YOUTUBE_API_KEY: YouTube Data API v3 key
 #   - ANTHROPIC_API_KEY: Anthropic Claude API key
-#   - GITHUB_USERNAME: Your GitHub username
+#   - GH_USERNAME: Your GitHub username
 #   - MEDIUM_USERNAME: Your Medium username
 #   - YOUTUBE_CHANNEL_ID: Your YouTube channel ID
 # ============================================================================
@@ -33,9 +33,11 @@ on:
 # Environment variables available to all jobs
 env:
   AWS_REGION: us-east-1
-  TF_VAR_github_username: ${{ secrets.GITHUB_USERNAME }}
+  TF_VAR_github_username: ${{ secrets.GH_USERNAME }}
   TF_VAR_medium_username: ${{ secrets.MEDIUM_USERNAME }}
   TF_VAR_youtube_channel_id: ${{ secrets.YOUTUBE_CHANNEL_ID }}
+  TF_VAR_domain_name: "vloidcloudtech.com"
+  TF_VAR_route53_zone_id: "Z0393886EJ0V2CL9B9Y0"
 
 # ============================================================================
 # Jobs
@@ -116,7 +118,7 @@ jobs:
         run: |
           aws secretsmanager put-secret-value \
             --secret-id ${{ needs.terraform.outputs.github_secret_name }} \
-            --secret-string '{"token":"${{ secrets.GITHUB_TOKEN_PAT }}"}'
+            --secret-string '{"token":"${{ secrets.GH_PERSONAL_ACCESS_TOKEN }}"}'
 
       - name: Update YouTube API Key Secret
         run: |

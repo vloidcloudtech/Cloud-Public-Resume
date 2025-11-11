@@ -65,16 +65,18 @@ Navigate to your GitHub repository → Settings → Secrets and variables → Ac
 
 | Secret Name | Description | How to Get |
 |-------------|-------------|------------|
-| `GITHUB_TOKEN_PAT` | GitHub Personal Access Token | [GitHub Settings](https://github.com/settings/tokens) → Generate new token (classic) |
+| `GH_PERSONAL_ACCESS_TOKEN` | GitHub Personal Access Token | [GitHub Settings](https://github.com/settings/tokens) → Generate new token (classic) |
 | `YOUTUBE_API_KEY` | YouTube Data API v3 key | [Google Cloud Console](https://console.cloud.google.com/apis/credentials) |
 | `ANTHROPIC_API_KEY` | Anthropic Claude API key | [Anthropic Console](https://console.anthropic.com/) |
+
+**Note:** GitHub doesn't allow secret names starting with `GITHUB_`, so we use `GH_` prefix instead.
 
 ### Content Source Identifiers
 
 | Secret Name | Description | Example |
 |-------------|-------------|---------|
-| `GITHUB_USERNAME` | Your GitHub username | `octocat` |
-| `MEDIUM_USERNAME` | Your Medium username | `@yourname` |
+| `GH_USERNAME` | Your GitHub username | `vloidcloudtech` |
+| `MEDIUM_USERNAME` | Your Medium username | `@vloidcloudtech` |
 | `YOUTUBE_CHANNEL_ID` | Your YouTube channel ID | `UCxxxxxxxxxxxxxxxxxxxxx` |
 
 ## Step-by-Step Setup
@@ -83,13 +85,15 @@ Navigate to your GitHub repository → Settings → Secrets and variables → Ac
 
 1. Go to [GitHub Settings → Tokens](https://github.com/settings/tokens)
 2. Click **Generate new token (classic)**
-3. Name it: `Portfolio Aggregator`
+3. Name it: `VloidCloudTech Portfolio`
 4. Select scopes:
    - ✅ `repo` (Full control of private repositories)
    - ✅ `public_repo` (Access public repositories)
 5. Click **Generate token**
 6. **Copy the token immediately** (shown only once)
-7. Add to GitHub Secrets as `GITHUB_TOKEN_PAT`
+7. Add to GitHub Secrets as `GH_PERSONAL_ACCESS_TOKEN`
+
+**Important:** GitHub restricts secret names from starting with `GITHUB_`, so we use `GH_PERSONAL_ACCESS_TOKEN` instead.
 
 ### 2. Get YouTube Data API Key
 
