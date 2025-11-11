@@ -1,0 +1,40 @@
+# ============================================================================
+# Terraform Variables Example File
+# ============================================================================
+# Copy this file to terraform.tfvars and update with your actual values
+# terraform.tfvars is gitignored to prevent committing sensitive data
+
+# ----------------------------------------------------------------------------
+# Infrastructure Configuration
+# ----------------------------------------------------------------------------
+
+aws_region     = "us-east-1"
+environment    = "production"
+project_name   = "portfolio-aggregator"
+
+# ----------------------------------------------------------------------------
+# Content Source Configuration
+# ----------------------------------------------------------------------------
+
+github_username    = "your-github-username"
+medium_username    = "your-medium-username"
+youtube_channel_id = "your-youtube-channel-id"
+
+# ----------------------------------------------------------------------------
+# Custom Domain Configuration
+# ----------------------------------------------------------------------------
+
+domain_name      = "vloidcloudtech.com"
+route53_zone_id  = "Z1234567890ABC"  # Find in Route 53 console
+
+# How to find your Route 53 Hosted Zone ID:
+# 1. Go to AWS Console → Route 53 → Hosted zones
+# 2. Click on your domain (vloidcloudtech.com)
+# 3. Copy the "Hosted zone ID" from the top right (starts with Z)
+
+# ----------------------------------------------------------------------------
+# Note: API Keys and Secrets
+# ----------------------------------------------------------------------------
+# API keys are managed via GitHub Secrets and AWS Secrets Manager
+# No need to specify secret ARNs here - they are created automatically
+# See GITHUB_SECRETS_SETUP.md for configuration details
