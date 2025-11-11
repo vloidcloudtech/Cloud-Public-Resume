@@ -76,14 +76,16 @@ Add these secrets:
 - `AWS_SECRET_ACCESS_KEY` = Your AWS secret key
 
 ### API Keys
-- `GITHUB_TOKEN_PAT` = GitHub Personal Access Token ([create here](https://github.com/settings/tokens))
+- `GH_PERSONAL_ACCESS_TOKEN` = GitHub Personal Access Token ([create here](https://github.com/settings/tokens))
 - `YOUTUBE_API_KEY` = YouTube Data API v3 key ([create here](https://console.cloud.google.com/apis/credentials))
 - `ANTHROPIC_API_KEY` = Anthropic Claude API key ([create here](https://console.anthropic.com/))
 
 ### Content Sources
-- `GITHUB_USERNAME` = Your GitHub username
-- `MEDIUM_USERNAME` = Your Medium username
+- `GH_USERNAME` = Your GitHub username (e.g., `vloidcloudtech`)
+- `MEDIUM_USERNAME` = Your Medium username (e.g., `@vloidcloudtech`)
 - `YOUTUBE_CHANNEL_ID` = Your YouTube channel ID
+
+**Important:** GitHub doesn't allow secret names starting with `GITHUB_`, so we use `GH_` prefix.
 
 **Detailed setup**: See [GITHUB_SECRETS_SETUP.md](GITHUB_SECRETS_SETUP.md)
 

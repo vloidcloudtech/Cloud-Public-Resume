@@ -17,8 +17,8 @@ echo "Deploying to S3..."
 # Get bucket name from Terraform output
 BUCKET_NAME=$(cd ../terraform && terraform output -raw frontend_bucket_name)
 
-# Sync to S3
-aws s3 sync build/ s3://$BUCKET_NAME --delete
+# Sync to S3 (Vite builds to dist/ directory, not build/)
+aws s3 sync dist/ s3://$BUCKET_NAME --delete
 
 echo "✓ Deployed to S3!"
 echo ""
