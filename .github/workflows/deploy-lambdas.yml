@@ -1,0 +1,141 @@
+# ============================================================================
+# GitHub Actions Workflow: Deploy Lambda Functions Only
+# ============================================================================
+# This workflow rebuilds and redeploys all Lambda functions with dependencies.
+# Use this to update Lambda code without redeploying the entire infrastructure.
+# ============================================================================
+
+name: Deploy Lambda Functions
+
+on:
+  workflow_dispatch:  # Manual trigger only
+
+env:
+  AWS_REGION: us-east-1
+
+jobs:
+  deploy-lambdas:
+    name: Build and Deploy Lambda Functions
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Build and Deploy Lambda Functions
+        run: |
+          cd backend
+          echo "Building and deploying Lambda functions..."
+
+          # Array of Lambda function directories and their AWS names
+          declare -A FUNCTIONS=(
+            ["github_sync"]="portfolio-aggregator-github-sync-production"
+            ["medium_sync"]="portfolio-aggregator-medium-sync-production"
+            ["youtube_sync"]="portfolio-aggregator-youtube-sync-production"
+            ["api_handler"]="portfolio-aggregator-api-production"
+          )
+
+          for FUNCTION_DIR in "${!FUNCTIONS[@]}"; do
+            FUNCTION_NAME="${FUNCTIONS[$FUNCTION_DIR]}"
+            echo ""
+            echo "=========================================="
+            echo "Building $FUNCTION_DIR..."
+            echo "=========================================="
+
+            cd lambda_functions/$FUNCTION_DIR
+
+            # Create package directory
+            mkdir -p package
+
+            # Install dependencies
+            if [ -f requirements.txt ]; then
+              echo "Installing dependencies..."
+              pip install -r requirements.txt -t package/ --quiet
+            fi
+
+            # Copy handler
+            echo "Copying handler..."
+            cp handler.py package/
+
+            # Copy shared modules
+            echo "Copying shared modules..."
+            mkdir -p package/shared
+            cp -r ../../shared/*.py package/shared/ 2>/dev/null || true
+
+            # Create deployment package
+            echo "Creating deployment package..."
+            cd package
+            zip -r ../deployment.zip . -q
+            cd ..
+
+            # Deploy to AWS Lambda
+            echo "Deploying to AWS Lambda: $FUNCTION_NAME"
+            aws lambda update-function-code \
+              --function-name $FUNCTION_NAME \
+              --zip-file fileb://deployment.zip \
+              --region $AWS_REGION
+
+            # Wait for update to complete
+            echo "Waiting for deployment to complete..."
+            aws lambda wait function-updated \
+              --function-name $FUNCTION_NAME \
+              --region $AWS_REGION
+
+            # Clean up
+            rm -rf package deployment.zip
+
+            echo "✓ Deployed $FUNCTION_DIR"
+            cd ../..
+          done
+
+          echo ""
+          echo "=========================================="
+          echo "✓ All Lambda functions deployed!"
+          echo "=========================================="
+
+      - name: Test Lambda Functions
+        run: |
+          echo ""
+          echo "Testing Lambda functions..."
+
+          # Test each function
+          aws lambda invoke \
+            --function-name portfolio-aggregator-github-sync-production \
+            --invocation-type Event \
+            --region $AWS_REGION \
+            /dev/null
+          echo "✓ Triggered github-sync"
+
+          aws lambda invoke \
+            --function-name portfolio-aggregator-medium-sync-production \
+            --invocation-type Event \
+            --region $AWS_REGION \
+            /dev/null
+          echo "✓ Triggered medium-sync"
+
+          aws lambda invoke \
+            --function-name portfolio-aggregator-youtube-sync-production \
+            --invocation-type Event \
+            --region $AWS_REGION \
+            /dev/null
+          echo "✓ Triggered youtube-sync"
+
+          echo ""
+          echo "=========================================="
+          echo "✓ All functions triggered successfully!"
+          echo "=========================================="
+          echo ""
+          echo "Check CloudWatch Logs for execution results:"
+          echo "https://console.aws.amazon.com/cloudwatch/home?region=$AWS_REGION#logsV2:log-groups"
