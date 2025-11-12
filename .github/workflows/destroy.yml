@@ -1,0 +1,110 @@
+# ============================================================================
+# GitHub Actions Workflow: Destroy Portfolio Aggregator Infrastructure
+# ============================================================================
+# This workflow destroys all AWS resources created by Terraform.
+# Use this to clean up before redeploying from scratch.
+#
+# WARNING: This will delete all infrastructure including data in DynamoD
+# ============================================================================
+
+name: Destroy Infrastructure
+
+on:
+  workflow_dispatch:  # Manual trigger only
+
+env:
+  AWS_REGION: us-east-1
+  TF_VAR_github_username: ${{ secrets.GH_USERNAME }}
+  TF_VAR_medium_username: ${{ secrets.MEDIUM_USERNAME }}
+  TF_VAR_youtube_channel_id: ${{ secrets.YOUTUBE_CHANNEL_ID }}
+  TF_VAR_domain_name: "vloidcloudtech.com"
+  TF_VAR_route53_zone_id: "Z0393886EJ0V2CL9B9Y0"
+
+jobs:
+  destroy:
+    name: Destroy Infrastructure
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.6.0
+          terraform_wrapper: false
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Terraform Init
+        run: |
+          cd terraform
+          terraform init
+
+      - name: Import Existing Resources
+        continue-on-error: true
+        run: |
+          cd terraform
+
+          # Import DynamoDB tables
+          terraform import module.database.aws_dynamodb_table.github_repos portfolio-aggregator-github-repos-production || true
+          terraform import module.database.aws_dynamodb_table.medium_posts portfolio-aggregator-medium-posts-production || true
+          terraform import module.database.aws_dynamodb_table.youtube_videos portfolio-aggregator-youtube-videos-production || true
+          terraform import module.database.aws_dynamodb_table.sync_metadata portfolio-aggregator-sync-metadata-production || true
+
+          # Import S3 bucket
+          terraform import module.frontend.aws_s3_bucket.frontend portfolio-aggregator-frontend-production || true
+
+          # Import IAM roles
+          terraform import module.api.aws_iam_role.api_lambda portfolio-aggregator-api-lambda-role-production || true
+          terraform import module.sync.aws_iam_role.sync_lambda portfolio-aggregator-sync-lambda-role-production || true
+
+          # Import Secrets
+          terraform import module.secrets.aws_secretsmanager_secret.github_token portfolio-aggregator-github-token-production || true
+          terraform import module.secrets.aws_secretsmanager_secret.youtube_api_key portfolio-aggregator-youtube-key-production || true
+          terraform import module.secrets.aws_secretsmanager_secret.ai_api_key portfolio-aggregator-ai-key-production || true
+
+      - name: Terraform Destroy
+        run: |
+          cd terraform
+          terraform destroy -auto-approve
+
+      - name: Cleanup Orphaned Resources
+        continue-on-error: true
+        run: |
+          # Delete any Lambda functions that might be orphaned
+          for func in $(aws lambda list-functions --query 'Functions[?contains(FunctionName, `portfolio-aggregator`)].FunctionName' --output text); do
+            echo "Deleting Lambda function: $func"
+            aws lambda delete-function --function-name $func || true
+          done
+
+          # Delete CloudFront distributions (must be disabled first)
+          for dist_id in $(aws cloudfront list-distributions --query 'DistributionList.Items[?Comment==`Portfolio Aggregator Frontend`].Id' --output text); do
+            echo "Found CloudFront distribution: $dist_id"
+            echo "Note: CloudFront distributions must be manually disabled and deleted via AWS Console"
+          done
+
+          # Empty and delete S3 buckets
+          for bucket in $(aws s3api list-buckets --query 'Buckets[?contains(Name, `portfolio-aggregator`)].Name' --output text); do
+            echo "Emptying S3 bucket: $bucket"
+            aws s3 rm s3://$bucket --recursive || true
+            echo "Deleting S3 bucket: $bucket"
+            aws s3api delete-bucket --bucket $bucket || true
+          done
+
+      - name: Summary
+        run: |
+          echo "============================================"
+          echo "✓ Infrastructure destruction complete!"
+          echo "============================================"
+          echo ""
+          echo "Next steps:"
+          echo "1. Go to GitHub Actions"
+          echo "2. Run the 'Deploy Portfolio Aggregator' workflow"
+          echo "3. This will create all resources from scratch"
