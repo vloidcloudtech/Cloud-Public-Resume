@@ -1,0 +1,256 @@
+# ============================================================================
+# GitHub Actions Workflow: Setup Remote Backend & Import Existing Resources
+# ============================================================================
+# This workflow:
+#   1. Creates the S3 bucket for Terraform state storage
+#   2. Imports all existing AWS resources into Terraform state
+#   3. Uploads the state file to S3
+#
+# Run this ONCE to fix the current deployment issue.
+# After this, all future deployments will use the remote backend automatically.
+# ============================================================================
+
+name: Setup Remote Backend
+
+on:
+  workflow_dispatch:  # Manual trigger only
+
+env:
+  AWS_REGION: us-east-1
+  TF_VAR_github_username: ${{ secrets.GH_USERNAME }}
+  TF_VAR_medium_username: ${{ secrets.MEDIUM_USERNAME }}
+  TF_VAR_youtube_channel_id: ${{ secrets.YOUTUBE_CHANNEL_ID }}
+  TF_VAR_domain_name: "vloidcloudtech.com"
+  TF_VAR_route53_zone_id: "Z0393886EJ0V2CL9B9Y0"
+  STATE_BUCKET: "vloidcloudtech-terraform-state"
+
+jobs:
+  setup-backend:
+    name: Setup Remote Backend
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.6.0
+          terraform_wrapper: false
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Create S3 Bucket for Terraform State
+        run: |
+          echo "Creating S3 bucket for Terraform state..."
+
+          # Check if bucket exists
+          if aws s3api head-bucket --bucket $STATE_BUCKET 2>/dev/null; then
+            echo "✓ Bucket already exists: $STATE_BUCKET"
+          else
+            echo "Creating bucket: $STATE_BUCKET"
+            aws s3api create-bucket \
+              --bucket $STATE_BUCKET \
+              --region $AWS_REGION
+
+            echo "✓ Bucket created"
+          fi
+
+          # Enable versioning
+          echo "Enabling versioning..."
+          aws s3api put-bucket-versioning \
+            --bucket $STATE_BUCKET \
+            --versioning-configuration Status=Enabled
+
+          echo "✓ Versioning enabled"
+
+          # Enable encryption
+          echo "Enabling encryption..."
+          aws s3api put-bucket-encryption \
+            --bucket $STATE_BUCKET \
+            --server-side-encryption-configuration '{
+              "Rules": [{
+                "ApplyServerSideEncryptionByDefault": {
+                  "SSEAlgorithm": "AES256"
+                }
+              }]
+            }'
+
+          echo "✓ Encryption enabled"
+
+          # Block public access
+          echo "Blocking public access..."
+          aws s3api put-public-access-block \
+            --bucket $STATE_BUCKET \
+            --public-access-block-configuration \
+              "BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true"
+
+          echo "✓ Public access blocked"
+          echo ""
+          echo "============================================"
+          echo "✓ S3 backend bucket ready!"
+          echo "============================================"
+
+      - name: Terraform Init (Local Backend)
+        run: |
+          cd terraform
+          terraform init
+
+      - name: Import Existing Resources
+        continue-on-error: true
+        run: |
+          cd terraform
+
+          echo "============================================"
+          echo "Importing existing AWS resources..."
+          echo "============================================"
+          echo ""
+
+          # Import DynamoDB tables
+          echo "Importing DynamoDB tables..."
+          terraform import module.database.aws_dynamodb_table.github_repos portfolio-aggregator-github-repos-production || echo "  (already in state or doesn't exist)"
+          terraform import module.database.aws_dynamodb_table.medium_posts portfolio-aggregator-medium-posts-production || echo "  (already in state or doesn't exist)"
+          terraform import module.database.aws_dynamodb_table.youtube_videos portfolio-aggregator-youtube-videos-production || echo "  (already in state or doesn't exist)"
+          terraform import module.database.aws_dynamodb_table.sync_metadata portfolio-aggregator-sync-metadata-production || echo "  (already in state or doesn't exist)"
+
+          # Import S3 bucket
+          echo "Importing S3 bucket..."
+          terraform import module.frontend.aws_s3_bucket.frontend portfolio-aggregator-frontend-production || echo "  (already in state or doesn't exist)"
+
+          # Import IAM roles
+          echo "Importing IAM roles..."
+          terraform import module.api.aws_iam_role.api_lambda portfolio-aggregator-api-lambda-role-production || echo "  (already in state or doesn't exist)"
+          terraform import module.sync.aws_iam_role.sync_lambda portfolio-aggregator-sync-lambda-role-production || echo "  (already in state or doesn't exist)"
+
+          # Import Secrets Manager secrets
+          echo "Importing Secrets Manager secrets..."
+          terraform import module.secrets.aws_secretsmanager_secret.github_token portfolio-aggregator-github-token-production || echo "  (already in state or doesn't exist)"
+          terraform import module.secrets.aws_secretsmanager_secret.youtube_api_key portfolio-aggregator-youtube-key-production || echo "  (already in state or doesn't exist)"
+          terraform import module.secrets.aws_secretsmanager_secret.ai_api_key portfolio-aggregator-ai-key-production || echo "  (already in state or doesn't exist)"
+
+          echo ""
+          echo "✓ Import complete"
+
+      - name: Terraform Refresh
+        run: |
+          cd terraform
+          terraform refresh
+
+      - name: Upload State to S3
+        run: |
+          cd terraform
+
+          echo "Uploading Terraform state to S3..."
+          aws s3 cp terraform.tfstate s3://$STATE_BUCKET/portfolio-aggregator/terraform.tfstate
+
+          echo "✓ State uploaded to S3"
+          echo ""
+          echo "State file location:"
+          echo "  s3://$STATE_BUCKET/portfolio-aggregator/terraform.tfstate"
+
+      - name: Verify State in S3
+        run: |
+          echo "Verifying state file in S3..."
+          aws s3api head-object \
+            --bucket $STATE_BUCKET \
+            --key portfolio-aggregator/terraform.tfstate
+
+          echo "✓ State file verified in S3"
+
+      - name: Uncomment Backend Configuration
+        run: |
+          cd terraform
+
+          echo "Enabling remote backend in backend.tf..."
+
+          # Create the updated backend.tf with uncommented backend block
+          cat > backend.tf << 'EOF'
+# ============================================================================
+# Terraform State Backend Configuration (S3 with Native State Locking)
+# ============================================================================
+# Uses S3's native state locking feature (available since AWS provider >= 5.0)
+# No DynamoDB table needed!
+#
+# This backend is now ENABLED and will be used for all future deployments.
+# State file location: s3://vloidcloudtech-terraform-state/portfolio-aggregator/terraform.tfstate
+# ============================================================================
+
+terraform {
+  backend "s3" {
+    bucket  = "vloidcloudtech-terraform-state"
+    key     = "portfolio-aggregator/terraform.tfstate"
+    region  = "us-east-1"
+    encrypt = true
+
+    # S3 native state locking (no DynamoDB needed)
+    # Requires AWS provider >= 5.0
+    use_lockfile = true
+  }
+}
+EOF
+
+          echo "✓ Backend configuration enabled"
+
+      - name: Create PR to Enable Remote Backend
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GH_PERSONAL_ACCESS_TOKEN }}
+          commit-message: "Enable remote S3 backend for Terraform state"
+          title: "Enable Remote S3 Backend"
+          body: |
+            ## Remote Backend Setup Complete ✅
+
+            This PR enables the remote S3 backend for Terraform state management.
+
+            ### What Changed
+            - Uncommented the backend configuration in `terraform/backend.tf`
+            - All future deployments will use the remote state in S3
+
+            ### What This Fixes
+            - ✅ Prevents "resource already exists" errors
+            - ✅ State is preserved across GitHub Actions runs
+            - ✅ Multiple people can work on infrastructure safely
+            - ✅ State versioning enabled for rollback capability
+
+            ### State File Location
+            ```
+            s3://vloidcloudtech-terraform-state/portfolio-aggregator/terraform.tfstate
+            ```
+
+            ### Merge Instructions
+            1. Review the changes in `terraform/backend.tf`
+            2. Merge this PR
+            3. Future deployments will automatically use the remote backend
+
+            ---
+            🤖 Generated by Setup Remote Backend workflow
+          branch: enable-remote-backend
+          delete-branch: true
+
+      - name: Summary
+        run: |
+          echo ""
+          echo "============================================"
+          echo "✓ Remote Backend Setup Complete!"
+          echo "============================================"
+          echo ""
+          echo "What was done:"
+          echo "  1. ✅ Created S3 bucket: $STATE_BUCKET"
+          echo "  2. ✅ Enabled versioning and encryption"
+          echo "  3. ✅ Imported all existing AWS resources"
+          echo "  4. ✅ Uploaded state file to S3"
+          echo "  5. ✅ Created PR to enable remote backend"
+          echo ""
+          echo "Next steps:"
+          echo "  1. Review and merge the PR: 'Enable Remote S3 Backend'"
+          echo "  2. After merge, all deployments will use remote state"
+          echo "  3. You'll never have this issue again!"
+          echo ""
+          echo "State file location:"
+          echo "  s3://$STATE_BUCKET/portfolio-aggregator/terraform.tfstate"

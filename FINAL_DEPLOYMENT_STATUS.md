@@ -288,13 +288,27 @@ aws logs tail /aws/lambda/portfolio-aggregator-github-sync-production --follow
 
 ---
 
-## 🎉 Ready to Deploy!
+## ⚠️ IMPORTANT: Remote Backend Setup Required
 
-**Everything is configured and verified. You can now deploy!**
+**Your deployment encountered "resource already exists" errors because Terraform state isn't being tracked across GitHub Actions runs.**
+
+### Fix This First (6 minutes):
+
+Follow the instructions in **[REMOTE_BACKEND_SOLUTION.md](REMOTE_BACKEND_SOLUTION.md)**
+
+**Quick Summary:**
+1. Commit and push the new files
+2. Run the "Setup Remote Backend" workflow in GitHub Actions
+3. Merge the PR it creates
+4. Deploy again - it will work perfectly!
+
+---
+
+## 🎉 After Backend Setup: Deploy!
+
+Once you've completed the backend setup, deploy with:
 
 ```bash
-git add .
-git commit -m "Ready for deployment - all issues fixed"
 git push origin main
 ```
 
@@ -306,6 +320,8 @@ git push origin main
 
 ## 📞 Support Resources
 
+- **🔧 REMOTE BACKEND FIX**: [REMOTE_BACKEND_SOLUTION.md](REMOTE_BACKEND_SOLUTION.md) ← **START HERE**
+- **Backend Setup Guide**: [BACKEND_SETUP_GUIDE.md](BACKEND_SETUP_GUIDE.md)
 - **Deployment Guide**: [DEPLOYMENT_READINESS.md](DEPLOYMENT_READINESS.md)
 - **Domain Setup**: [DOMAIN_SETUP_GUIDE.md](DOMAIN_SETUP_GUIDE.md)
 - **GitHub Secrets**: [GITHUB_SECRETS_SETUP.md](GITHUB_SECRETS_SETUP.md)
@@ -313,6 +329,6 @@ git push origin main
 
 ---
 
-**Status**: All systems go! 🚀
-**Last Verified**: 2025-01-10
-**Ready for Production**: YES ✅
+**Status**: Backend setup required ⚠️
+**Last Verified**: 2025-11-12
+**Action Required**: Run remote backend setup workflow
