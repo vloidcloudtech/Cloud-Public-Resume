@@ -77,6 +77,33 @@ jobs:
           cd terraform
           terraform init
 
+      - name: Import Existing Resources
+        if: github.ref == 'refs/heads/main'
+        continue-on-error: true
+        run: |
+          cd terraform
+          echo "Importing existing resources (if any)..."
+
+          # Import DynamoDB tables
+          terraform import module.database.aws_dynamodb_table.github_repos portfolio-aggregator-github-repos-production 2>/dev/null || echo "  github_repos: skipped"
+          terraform import module.database.aws_dynamodb_table.medium_posts portfolio-aggregator-medium-posts-production 2>/dev/null || echo "  medium_posts: skipped"
+          terraform import module.database.aws_dynamodb_table.youtube_videos portfolio-aggregator-youtube-videos-production 2>/dev/null || echo "  youtube_videos: skipped"
+          terraform import module.database.aws_dynamodb_table.sync_metadata portfolio-aggregator-sync-metadata-production 2>/dev/null || echo "  sync_metadata: skipped"
+
+          # Import S3 bucket
+          terraform import module.frontend.aws_s3_bucket.frontend portfolio-aggregator-frontend-production 2>/dev/null || echo "  frontend bucket: skipped"
+
+          # Import IAM roles
+          terraform import module.api.aws_iam_role.api_lambda portfolio-aggregator-api-lambda-role-production 2>/dev/null || echo "  api lambda role: skipped"
+          terraform import module.sync.aws_iam_role.sync_lambda portfolio-aggregator-sync-lambda-role-production 2>/dev/null || echo "  sync lambda role: skipped"
+
+          # Import Secrets Manager secrets
+          terraform import module.secrets.aws_secretsmanager_secret.github_token portfolio-aggregator-github-token-production 2>/dev/null || echo "  github token secret: skipped"
+          terraform import module.secrets.aws_secretsmanager_secret.youtube_api_key portfolio-aggregator-youtube-key-production 2>/dev/null || echo "  youtube api key secret: skipped"
+          terraform import module.secrets.aws_secretsmanager_secret.ai_api_key portfolio-aggregator-ai-key-production 2>/dev/null || echo "  ai api key secret: skipped"
+
+          echo "Import complete"
+
       - name: Terraform Plan
         run: |
           cd terraform
