@@ -13,5 +13,9 @@ terraform {
     key     = "portfolio-aggregator/terraform.tfstate"
     region  = "us-east-1"
     encrypt = true
+#
+#     # S3 native state locking (no DynamoDB needed)
+#     # Requires AWS provider >= 5.0
+    use_lockfile = true
   }
 }
