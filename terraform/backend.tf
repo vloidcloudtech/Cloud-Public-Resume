@@ -1,29 +1,17 @@
 # ============================================================================
-# Terraform State Backend Configuration (S3 with Native State Locking)
+# Terraform State Backend Configuration (S3)
 # ============================================================================
-# Uses S3's native state locking feature (available since AWS provider >= 5.0)
-# No DynamoDB table needed!
+# This backend configuration stores Terraform state in S3 with versioning.
 #
-# IMPORTANT: For first deployment:
-#   1. Comment out this entire backend block
-#   2. Run terraform apply to create infrastructure
-#   3. Manually create the S3 bucket: vloidcloudtech-terraform-state
-#   4. Enable versioning on the bucket
-#   5. Uncomment this backend configuration
-#   6. Run: terraform init -migrate-state
-#
-# For now: COMMENT OUT the backend block below for first deployment
+# ENABLED: Remote backend is now active for all deployments.
+# State file location: s3://vloidcloudtech-terraform-state/portfolio-aggregator/terraform.tfstate
 # ============================================================================
 
-# terraform {
-#   backend "s3" {
-#     bucket  = "vloidcloudtech-terraform-state"
-#     key     = "portfolio-aggregator/terraform.tfstate"
-#     region  = "us-east-1"
-#     encrypt = true
-#
-#     # S3 native state locking (no DynamoDB needed)
-#     # Requires AWS provider >= 5.0
-#     use_lockfile = true
-#   }
-# }
+terraform {
+  backend "s3" {
+    bucket  = "vloidcloudtech-terraform-state"
+    key     = "portfolio-aggregator/terraform.tfstate"
+    region  = "us-east-1"
+    encrypt = true
+  }
+}
