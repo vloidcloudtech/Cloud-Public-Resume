@@ -94,8 +94,6 @@ resource "aws_lambda_layer_version" "shared" {
   compatible_runtimes = ["python3.11"]
 
   source_code_hash = filebase64sha256("${path.module}/../../../backend/layer.zip")
-
-  tags = var.tags
 }
 
 # GitHub Sync Lambda
