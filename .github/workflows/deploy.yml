@@ -147,6 +147,10 @@ jobs:
             echo "  cloudfront: not found, will be created"
           fi
 
+          # Import Route 53 DNS records
+          terraform import 'module.frontend.aws_route53_record.frontend' Z0393886EJ0V2CL9B9Y0_vloidcloudtech.com_A 2>/dev/null || echo "  route53 A record (root): skipped"
+          terraform import 'module.frontend.aws_route53_record.frontend_www' Z0393886EJ0V2CL9B9Y0_www.vloidcloudtech.com_A 2>/dev/null || echo "  route53 A record (www): skipped"
+
           # Import IAM roles
           terraform import module.api.aws_iam_role.api_lambda portfolio-aggregator-api-lambda-role-production 2>/dev/null || echo "  api lambda role: skipped"
           terraform import module.sync.aws_iam_role.sync_lambda portfolio-aggregator-sync-lambda-role-production 2>/dev/null || echo "  sync lambda role: skipped"
