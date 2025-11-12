@@ -231,7 +231,7 @@ jobs:
           echo "  4. ✅ Uploaded state file to S3"
           echo "  5. ✅ Created PR to enable remote backend"
           echo ""
-          echo "Next steps:"
+          echo "Next steps "
           echo "  1. Review and merge the PR: 'Enable Remote S3 Backend'"
           echo "  2. After merge, all deployments will use remote state"
           echo "  3. You'll never have this issue again!"
