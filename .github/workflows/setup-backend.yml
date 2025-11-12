@@ -166,34 +166,18 @@ jobs:
       - name: Uncomment Backend Configuration
         run: |
           cd terraform
-
           echo "Enabling remote backend in backend.tf..."
 
-          # Create the updated backend.tf with uncommented backend block
-          cat > backend.tf << 'EOF'
-# ============================================================================
-# Terraform State Backend Configuration (S3 with Native State Locking)
-# ============================================================================
-# Uses S3's native state locking feature (available since AWS provider >= 5.0)
-# No DynamoDB table needed!
-#
-# This backend is now ENABLED and will be used for all future deployments.
-# State file location: s3://vloidcloudtech-terraform-state/portfolio-aggregator/terraform.tfstate
-# ============================================================================
-
-terraform {
-  backend "s3" {
-    bucket  = "vloidcloudtech-terraform-state"
-    key     = "portfolio-aggregator/terraform.tfstate"
-    region  = "us-east-1"
-    encrypt = true
-
-    # S3 native state locking (no DynamoDB needed)
-    # Requires AWS provider >= 5.0
-    use_lockfile = true
-  }
-}
-EOF
+          # Uncomment the backend block using sed
+          sed -i 's/^# terraform {$/terraform {/' backend.tf
+          sed -i 's/^#   backend "s3" {$/  backend "s3" {/' backend.tf
+          sed -i 's/^#     bucket/    bucket/' backend.tf
+          sed -i 's/^#     key/    key/' backend.tf
+          sed -i 's/^#     region/    region/' backend.tf
+          sed -i 's/^#     encrypt/    encrypt/' backend.tf
+          sed -i 's/^#     use_lockfile/    use_lockfile/' backend.tf
+          sed -i 's/^#   }$/  }/' backend.tf
+          sed -i 's/^# }$/}/' backend.tf
 
           echo "✓ Backend configuration enabled"
 
