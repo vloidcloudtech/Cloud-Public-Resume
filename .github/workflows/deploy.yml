@@ -72,6 +72,51 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Build Lambda Deployment Packages
+        run: |
+          cd backend
+          echo "Building Lambda deployment packages..."
+
+          # Array of Lambda function directories
+          FUNCTIONS=("github_sync" "medium_sync" "youtube_sync" "api_handler")
+
+          for FUNCTION in "${FUNCTIONS[@]}"; do
+            echo "Building $FUNCTION..."
+            cd lambda_functions/$FUNCTION
+
+            # Create package directory
+            mkdir -p package
+
+            # Install dependencies
+            if [ -f requirements.txt ]; then
+              pip install -r requirements.txt -t package/ --quiet
+            fi
+
+            # Copy handler
+            cp handler.py package/
+
+            # Copy shared modules
+            cp -r ../../shared/*.py package/ 2>/dev/null || true
+
+            # Create deployment package
+            cd package
+            zip -r ../deployment.zip . -q
+            cd ..
+
+            # Clean up
+            rm -rf package
+
+            echo "✓ Built $FUNCTION"
+            cd ../..
+          done
+
+          echo "✓ All Lambda functions built successfully!"
+
       - name: Terraform Init
         run: |
           cd terraform
@@ -92,6 +137,15 @@ jobs:
 
           # Import S3 bucket
           terraform import module.frontend.aws_s3_bucket.frontend portfolio-aggregator-frontend-production 2>/dev/null || echo "  frontend bucket: skipped"
+
+          # Import CloudFront distribution (find existing distribution with the CNAME)
+          CLOUDFRONT_ID=$(aws cloudfront list-distributions --query "DistributionList.Items[?Aliases.Items && contains(Aliases.Items, 'vloidcloudtech.com')].Id | [0]" --output text 2>/dev/null || echo "")
+          if [ -n "$CLOUDFRONT_ID" ] && [ "$CLOUDFRONT_ID" != "None" ]; then
+            echo "  Found CloudFront distribution: $CLOUDFRONT_ID"
+            terraform import module.frontend.aws_cloudfront_distribution.frontend $CLOUDFRONT_ID 2>/dev/null || echo "  cloudfront: skipped"
+          else
+            echo "  cloudfront: not found, will be created"
+          fi
 
           # Import IAM roles
           terraform import module.api.aws_iam_role.api_lambda portfolio-aggregator-api-lambda-role-production 2>/dev/null || echo "  api lambda role: skipped"
