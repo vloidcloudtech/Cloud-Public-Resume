@@ -53,3 +53,8 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+variable "shared_layer_arn" {
+  description = "ARN of shared Lambda layer"
+  type        = string
+}

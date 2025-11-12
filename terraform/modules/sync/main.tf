@@ -65,6 +65,39 @@ resource "aws_iam_role_policy" "sync_lambda" {
   })
 }
 
+# CloudWatch Log Groups (with retention to prevent unbounded growth)
+resource "aws_cloudwatch_log_group" "github_sync" {
+  name              = "/aws/lambda/${var.project_name}-github-sync-${var.environment}"
+  retention_in_days = 7  # Logs retained for 7 days (cost optimization)
+
+  tags = var.tags
+}
+
+resource "aws_cloudwatch_log_group" "medium_sync" {
+  name              = "/aws/lambda/${var.project_name}-medium-sync-${var.environment}"
+  retention_in_days = 7
+
+  tags = var.tags
+}
+
+resource "aws_cloudwatch_log_group" "youtube_sync" {
+  name              = "/aws/lambda/${var.project_name}-youtube-sync-${var.environment}"
+  retention_in_days = 7
+
+  tags = var.tags
+}
+
+# Lambda Layer for Shared Code
+resource "aws_lambda_layer_version" "shared" {
+  filename            = "${path.module}/../../../backend/layer.zip"
+  layer_name          = "${var.project_name}-shared-layer-${var.environment}"
+  compatible_runtimes = ["python3.11"]
+
+  source_code_hash = filebase64sha256("${path.module}/../../../backend/layer.zip")
+
+  tags = var.tags
+}
+
 # GitHub Sync Lambda
 resource "aws_lambda_function" "github_sync" {
   filename      = "${path.module}/../../../backend/lambda_functions/github_sync/deployment.zip"
@@ -84,6 +117,10 @@ resource "aws_lambda_function" "github_sync" {
       SYNC_METADATA_TABLE = var.sync_metadata_table_name
     }
   }
+
+  layers = [aws_lambda_layer_version.shared.arn]
+
+  depends_on = [aws_cloudwatch_log_group.github_sync]
 
   tags = var.tags
 }
@@ -106,6 +143,10 @@ resource "aws_lambda_function" "medium_sync" {
     }
   }
 
+  layers = [aws_lambda_layer_version.shared.arn]
+
+  depends_on = [aws_cloudwatch_log_group.medium_sync]
+
   tags = var.tags
 }
 
@@ -127,6 +168,10 @@ resource "aws_lambda_function" "youtube_sync" {
       SYNC_METADATA_TABLE    = var.sync_metadata_table_name
     }
   }
+
+  layers = [aws_lambda_layer_version.shared.arn]
+
+  depends_on = [aws_cloudwatch_log_group.youtube_sync]
 
   tags = var.tags
 }

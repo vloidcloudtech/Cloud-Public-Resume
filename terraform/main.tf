@@ -96,6 +96,9 @@ module "api" {
   environment  = var.environment
   tags         = local.common_tags
 
+  # Lambda layer ARN from sync module
+  shared_layer_arn = module.sync.shared_layer_arn
+
   # DynamoDB table names passed from database module
   github_repos_table_name   = module.database.github_repos_table_name
   github_repos_table_arn    = module.database.github_repos_table_arn

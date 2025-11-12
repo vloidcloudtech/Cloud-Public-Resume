@@ -102,9 +102,6 @@ jobs:
             # Copy handler
             cp handler.py package/
 
-            # Copy shared modules
-            cp -r ../../shared/*.py package/ 2>/dev/null || true
-
             # Create deployment package
             cd package
             zip -r ../deployment.zip . -q
@@ -117,7 +114,16 @@ jobs:
             cd ../..
           done
 
-          echo "✓ All Lambda functions built successfully!"
+          # Create Lambda layer for shared code
+          echo "Building shared layer..."
+          cd shared
+          mkdir -p python
+          cp *.py python/
+          zip -r ../layer.zip python -q
+          rm -rf python
+          cd ..
+
+          echo "✓ All Lambda functions and layer built successfully!"
 
       - name: Terraform Init
         run: |
