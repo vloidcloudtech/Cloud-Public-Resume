@@ -53,6 +53,14 @@ resource "aws_iam_role_policy" "api_lambda" {
   })
 }
 
+# CloudWatch Log Group (with retention to prevent unbounded growth)
+resource "aws_cloudwatch_log_group" "api_lambda" {
+  name              = "/aws/lambda/${var.project_name}-api-${var.environment}"
+  retention_in_days = 7  # Logs retained for 7 days (cost optimization)
+
+  tags = var.tags
+}
+
 # Lambda Function
 resource "aws_lambda_function" "api" {
   filename      = "${path.module}/../../../backend/lambda_functions/api_handler/deployment.zip"
@@ -71,6 +79,11 @@ resource "aws_lambda_function" "api" {
       SYNC_METADATA_TABLE  = var.sync_metadata_table_name
     }
   }
+
+  layers = [var.shared_layer_arn]
+
+  # Ensure log group exists before Lambda function
+  depends_on = [aws_cloudwatch_log_group.api_lambda]
 
   tags = var.tags
 }
