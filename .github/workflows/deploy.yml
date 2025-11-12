@@ -54,6 +54,8 @@ jobs:
       github_secret_name: ${{ steps.tf-output.outputs.github_secret_name }}
       youtube_secret_name: ${{ steps.tf-output.outputs.youtube_secret_name }}
       ai_secret_name: ${{ steps.tf-output.outputs.ai_secret_name }}
+      frontend_bucket_name: ${{ steps.tf-output.outputs.frontend_bucket_name }}
+      cloudfront_distribution_id: ${{ steps.tf-output.outputs.cloudfront_distribution_id }}
 
     steps:
       - name: Checkout code
@@ -181,6 +183,8 @@ jobs:
           echo "github_secret_name=$(terraform output -raw github_token_secret_name)" >> $GITHUB_OUTPUT
           echo "youtube_secret_name=$(terraform output -raw youtube_api_key_secret_name)" >> $GITHUB_OUTPUT
           echo "ai_secret_name=$(terraform output -raw ai_api_key_secret_name)" >> $GITHUB_OUTPUT
+          echo "frontend_bucket_name=$(terraform output -raw frontend_bucket_name)" >> $GITHUB_OUTPUT
+          echo "cloudfront_distribution_id=$(terraform output -raw cloudfront_distribution_id)" >> $GITHUB_OUTPUT
 
   # --------------------------------------------------------------------------
   # Job 2: Populate AWS Secrets from GitHub Secrets
@@ -277,10 +281,37 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Build and Deploy Frontend
+        env:
+          BUCKET_NAME: ${{ needs.terraform.outputs.frontend_bucket_name }}
+          DIST_ID: ${{ needs.terraform.outputs.cloudfront_distribution_id }}
         run: |
           cd frontend
-          chmod +x deploy.sh
-          ./deploy.sh
+
+          # Install dependencies
+          npm install
+
+          # Build for production
+          npm run build
+
+          echo "✓ Frontend built successfully!"
+          echo ""
+          echo "Deploying to S3..."
+
+          # Sync to S3
+          aws s3 sync dist/ s3://$BUCKET_NAME --delete
+
+          echo "✓ Deployed to S3!"
+          echo ""
+          echo "Invalidating CloudFront cache..."
+
+          # Create invalidation
+          aws cloudfront create-invalidation \
+              --distribution-id $DIST_ID \
+              --paths "/*"
+
+          echo "✓ CloudFront cache invalidated!"
+          echo ""
+          echo "🚀 Deployment complete!"
 
 # ============================================================================
 # End of Workflow
