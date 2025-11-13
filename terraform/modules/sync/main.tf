@@ -71,6 +71,10 @@ resource "aws_cloudwatch_log_group" "github_sync" {
   retention_in_days = 7  # Logs retained for 7 days (cost optimization)
 
   tags = var.tags
+
+  lifecycle {
+    ignore_changes = [name]  # Ignore if already exists
+  }
 }
 
 resource "aws_cloudwatch_log_group" "medium_sync" {
@@ -78,6 +82,10 @@ resource "aws_cloudwatch_log_group" "medium_sync" {
   retention_in_days = 7
 
   tags = var.tags
+
+  lifecycle {
+    ignore_changes = [name]  # Ignore if already exists
+  }
 }
 
 resource "aws_cloudwatch_log_group" "youtube_sync" {
@@ -85,6 +93,10 @@ resource "aws_cloudwatch_log_group" "youtube_sync" {
   retention_in_days = 7
 
   tags = var.tags
+
+  lifecycle {
+    ignore_changes = [name]  # Ignore if already exists
+  }
 }
 
 # Lambda Layer for Shared Code

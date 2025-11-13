@@ -168,6 +168,11 @@ jobs:
           terraform import module.secrets.aws_secretsmanager_secret.youtube_api_key portfolio-aggregator-youtube-key-production 2>/dev/null || echo "  youtube api key secret: skipped"
           terraform import module.secrets.aws_secretsmanager_secret.ai_api_key portfolio-aggregator-ai-key-production 2>/dev/null || echo "  ai api key secret: skipped"
 
+          # Import CloudWatch Log Groups
+          terraform import module.sync.aws_cloudwatch_log_group.github_sync /aws/lambda/portfolio-aggregator-github-sync-production 2>/dev/null || echo "  github sync log group: skipped"
+          terraform import module.sync.aws_cloudwatch_log_group.medium_sync /aws/lambda/portfolio-aggregator-medium-sync-production 2>/dev/null || echo "  medium sync log group: skipped"
+          terraform import module.sync.aws_cloudwatch_log_group.youtube_sync /aws/lambda/portfolio-aggregator-youtube-sync-production 2>/dev/null || echo "  youtube sync log group: skipped"
+
           echo "Import complete"
 
       - name: Terraform Plan
