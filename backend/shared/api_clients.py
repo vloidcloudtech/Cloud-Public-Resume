@@ -1,8 +1,13 @@
 import requests
 import base64
-import feedparser
 
-# Conditional import - only needed for YouTubeClient
+# Conditional imports - only needed for specific clients
+try:
+    import feedparser
+except ImportError:
+    # feedparser not installed - MediumClient won't work but other clients will
+    feedparser = None
+
 try:
     from googleapiclient.discovery import build
 except ImportError:

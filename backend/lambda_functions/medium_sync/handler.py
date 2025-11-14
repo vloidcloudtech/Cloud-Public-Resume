@@ -2,11 +2,23 @@ import json
 import os
 import time
 import hashlib
+import re
 import sys
 sys.path.append('/opt/python')
 
 from db_client import DBClient
 from api_clients import MediumClient
+
+def strip_html(text):
+    """Remove HTML tags from text"""
+    if not text:
+        return ""
+    # Remove HTML tags
+    clean = re.sub('<.*?>', '', text)
+    # Replace multiple spaces with single space
+    clean = re.sub(r'\s+', ' ', clean)
+    # Trim whitespace
+    return clean.strip()
 
 def lambda_handler(event, context):
     """Main handler for Medium sync"""
@@ -35,10 +47,14 @@ def lambda_handler(event, context):
             summary_length = len(post['summary'])
             read_time = max(1, summary_length // 1000)  # ~1 min per 1000 chars
 
+            # Strip HTML from summary
+            clean_summary = strip_html(post['summary'])
+            excerpt = clean_summary[:300] + '...' if len(clean_summary) > 300 else clean_summary
+
             post_data = {
                 'post_id': post_id,
                 'title': post['title'],
-                'excerpt': post['summary'][:300] + '...',
+                'excerpt': excerpt,
                 'published_date': post['published'],
                 'read_time': f'{read_time} min read',
                 'url': post['link'],
