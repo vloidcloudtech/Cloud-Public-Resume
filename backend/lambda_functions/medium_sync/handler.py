@@ -12,6 +12,8 @@ def lambda_handler(event, context):
     """Main handler for Medium sync"""
     print("Starting Medium sync...")
 
+    db_client = None  # Initialize to None so it's available in except block
+
     try:
         username = os.environ['MEDIUM_USERNAME']
 
@@ -60,7 +62,8 @@ def lambda_handler(event, context):
 
     except Exception as e:
         print(f"Error: {str(e)}")
-        db_client.update_sync_metadata('medium', 'failed', 0, str(e))
+        if db_client:
+            db_client.update_sync_metadata('medium', 'failed', 0, str(e))
 
         return {
             'statusCode': 500,

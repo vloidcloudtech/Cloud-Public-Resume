@@ -13,10 +13,11 @@ class DecimalEncoder(json.JSONEncoder):
 
 class DBClient:
     def __init__(self):
-        self.github_table = dynamodb.Table(os.environ['GITHUB_REPOS_TABLE'])
-        self.medium_table = dynamodb.Table(os.environ['MEDIUM_POSTS_TABLE'])
-        self.youtube_table = dynamodb.Table(os.environ['YOUTUBE_VIDEOS_TABLE'])
-        self.sync_table = dynamodb.Table(os.environ['SYNC_METADATA_TABLE'])
+        # Only initialize tables if their environment variables are set
+        self.github_table = dynamodb.Table(os.environ['GITHUB_REPOS_TABLE']) if 'GITHUB_REPOS_TABLE' in os.environ else None
+        self.medium_table = dynamodb.Table(os.environ['MEDIUM_POSTS_TABLE']) if 'MEDIUM_POSTS_TABLE' in os.environ else None
+        self.youtube_table = dynamodb.Table(os.environ['YOUTUBE_VIDEOS_TABLE']) if 'YOUTUBE_VIDEOS_TABLE' in os.environ else None
+        self.sync_table = dynamodb.Table(os.environ['SYNC_METADATA_TABLE']) if 'SYNC_METADATA_TABLE' in os.environ else None
 
     def put_repo(self, repo_data):
         """Store a GitHub repository"""

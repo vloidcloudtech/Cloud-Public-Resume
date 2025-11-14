@@ -34,6 +34,8 @@ def lambda_handler(event, context):
     """Main handler for YouTube sync"""
     print("Starting YouTube sync...")
 
+    db_client = None  # Initialize to None so it's available in except block
+
     try:
         # Get secrets
         youtube_secret = get_secret(os.environ['YOUTUBE_API_KEY_SECRET'])
@@ -79,7 +81,8 @@ def lambda_handler(event, context):
 
     except Exception as e:
         print(f"Error: {str(e)}")
-        db_client.update_sync_metadata('youtube', 'failed', 0, str(e))
+        if db_client:
+            db_client.update_sync_metadata('youtube', 'failed', 0, str(e))
 
         return {
             'statusCode': 500,
