@@ -84,7 +84,12 @@ def generate_summaries(readme_content, ai_api_key):
         - Falls back to error message if API call fails
         - Model: claude-3-5-sonnet-20241022 (latest Sonnet version)
     """
-    client = Anthropic(api_key=ai_api_key)
+    # Initialize Anthropic client without proxy settings for Lambda
+    client = Anthropic(
+        api_key=ai_api_key,
+        max_retries=2,
+        timeout=30.0
+    )
 
     # Construct the prompt for Claude
     # We ask for JSON output to make parsing easier and more reliable
