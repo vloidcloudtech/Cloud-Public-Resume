@@ -63,13 +63,14 @@ resource "aws_cloudwatch_log_group" "api_lambda" {
 
 # Lambda Function
 resource "aws_lambda_function" "api" {
-  filename      = "${path.module}/../../../backend/lambda_functions/api_handler/deployment.zip"
-  function_name = "${var.project_name}-api-${var.environment}"
-  role          = aws_iam_role.api_lambda.arn
-  handler       = "handler.lambda_handler"
-  runtime       = "python3.11"
-  timeout       = 30
-  memory_size   = 256
+  filename         = "${path.module}/../../../backend/lambda_functions/api_handler/deployment.zip"
+  function_name    = "${var.project_name}-api-${var.environment}"
+  role             = aws_iam_role.api_lambda.arn
+  handler          = "handler.lambda_handler"
+  runtime          = "python3.11"
+  timeout          = 30
+  memory_size      = 256
+  source_code_hash = filebase64sha256("${path.module}/../../../backend/lambda_functions/api_handler/deployment.zip")
 
   environment {
     variables = {

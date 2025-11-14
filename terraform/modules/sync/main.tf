@@ -110,13 +110,14 @@ resource "aws_lambda_layer_version" "shared" {
 
 # GitHub Sync Lambda
 resource "aws_lambda_function" "github_sync" {
-  filename      = "${path.module}/../../../backend/lambda_functions/github_sync/deployment.zip"
-  function_name = "${var.project_name}-github-sync-${var.environment}"
-  role          = aws_iam_role.sync_lambda.arn
-  handler       = "handler.lambda_handler"
-  runtime       = "python3.11"
-  timeout       = 300 # 5 minutes
-  memory_size   = 512
+  filename         = "${path.module}/../../../backend/lambda_functions/github_sync/deployment.zip"
+  function_name    = "${var.project_name}-github-sync-${var.environment}"
+  role             = aws_iam_role.sync_lambda.arn
+  handler          = "handler.lambda_handler"
+  runtime          = "python3.11"
+  timeout          = 300 # 5 minutes
+  memory_size      = 512
+  source_code_hash = filebase64sha256("${path.module}/../../../backend/lambda_functions/github_sync/deployment.zip")
 
   environment {
     variables = {
@@ -137,13 +138,14 @@ resource "aws_lambda_function" "github_sync" {
 
 # Medium Sync Lambda
 resource "aws_lambda_function" "medium_sync" {
-  filename      = "${path.module}/../../../backend/lambda_functions/medium_sync/deployment.zip"
-  function_name = "${var.project_name}-medium-sync-${var.environment}"
-  role          = aws_iam_role.sync_lambda.arn
-  handler       = "handler.lambda_handler"
-  runtime       = "python3.11"
-  timeout       = 60
-  memory_size   = 256
+  filename         = "${path.module}/../../../backend/lambda_functions/medium_sync/deployment.zip"
+  function_name    = "${var.project_name}-medium-sync-${var.environment}"
+  role             = aws_iam_role.sync_lambda.arn
+  handler          = "handler.lambda_handler"
+  runtime          = "python3.11"
+  timeout          = 60
+  memory_size      = 256
+  source_code_hash = filebase64sha256("${path.module}/../../../backend/lambda_functions/medium_sync/deployment.zip")
 
   environment {
     variables = {
@@ -162,13 +164,14 @@ resource "aws_lambda_function" "medium_sync" {
 
 # YouTube Sync Lambda
 resource "aws_lambda_function" "youtube_sync" {
-  filename      = "${path.module}/../../../backend/lambda_functions/youtube_sync/deployment.zip"
-  function_name = "${var.project_name}-youtube-sync-${var.environment}"
-  role          = aws_iam_role.sync_lambda.arn
-  handler       = "handler.lambda_handler"
-  runtime       = "python3.11"
-  timeout       = 60
-  memory_size   = 256
+  filename         = "${path.module}/../../../backend/lambda_functions/youtube_sync/deployment.zip"
+  function_name    = "${var.project_name}-youtube-sync-${var.environment}"
+  role             = aws_iam_role.sync_lambda.arn
+  handler          = "handler.lambda_handler"
+  runtime          = "python3.11"
+  timeout          = 60
+  memory_size      = 256
+  source_code_hash = filebase64sha256("${path.module}/../../../backend/lambda_functions/youtube_sync/deployment.zip")
 
   environment {
     variables = {
