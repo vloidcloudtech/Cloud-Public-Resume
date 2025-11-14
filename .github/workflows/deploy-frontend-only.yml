@@ -31,7 +31,7 @@ jobs:
         id: get-api
         run: |
           # Get API Gateway URL directly from AWS
-          API_ID=$(aws apigatewayv2 get-apis --query "Items[?Name=='portfolio-aggregator-api-production'].ApiId" --output text | awk '{print $1}')
+          API_ID=$(aws apigatewayv2 get-apis --query "Items[?Name=='portfolio-aggregator-api-production'].ApiId | [0]" --output text)
           API_ENDPOINT="https://${API_ID}.execute-api.us-east-1.amazonaws.com"
           echo "API_ENDPOINT=${API_ENDPOINT}" >> $GITHUB_OUTPUT
           echo "Found API endpoint: ${API_ENDPOINT}"
@@ -39,8 +39,8 @@ jobs:
       - name: Get S3 Bucket and CloudFront ID
         id: get-infra
         run: |
-          BUCKET=$(aws s3api list-buckets --query "Buckets[?contains(Name, 'portfolio-aggregator-frontend')].Name" --output text | awk '{print $1}')
-          DIST_ID=$(aws cloudfront list-distributions --query "DistributionList.Items[?Comment=='portfolio-aggregator-frontend-production'].Id" --output text | awk '{print $1}')
+          BUCKET=$(aws s3api list-buckets --query "Buckets[?contains(Name, 'portfolio-aggregator-frontend')].Name | [0]" --output text)
+          DIST_ID=$(aws cloudfront list-distributions --query "DistributionList.Items[?Comment=='portfolio-aggregator-frontend-production'].Id | [0]" --output text)
           echo "BUCKET=${BUCKET}" >> $GITHUB_OUTPUT
           echo "DIST_ID=${DIST_ID}" >> $GITHUB_OUTPUT
           echo "Found bucket: ${BUCKET}"
