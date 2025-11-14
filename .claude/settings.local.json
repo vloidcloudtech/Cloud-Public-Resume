@@ -1,7 +1,14 @@
 {
   "permissions": {
     "allow": [
-      "Bash(cp:*)"
+      "Bash(cp:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(aws dynamodb scan:*)",
+      "Bash(terraform output:*)",
+      "Bash(git push)",
+      "Bash(aws apigatewayv2 get-routes:*)",
+      "Bash(MSYS_NO_PATHCONV=1 aws logs:*)"
     ],
     "deny": [],
     "ask": []
