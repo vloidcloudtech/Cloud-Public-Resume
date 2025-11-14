@@ -53,12 +53,44 @@ resource "aws_iam_role_policy" "api_lambda" {
   })
 }
 
-# CloudWatch Log Group (with retention to prevent unbounded growth)
+# CloudWatch Log Groups (with retention to prevent unbounded growth)
 resource "aws_cloudwatch_log_group" "api_lambda" {
   name              = "/aws/lambda/${var.project_name}-api-${var.environment}"
   retention_in_days = 7  # Logs retained for 7 days (cost optimization)
 
   tags = var.tags
+}
+
+resource "aws_cloudwatch_log_group" "api_gateway" {
+  name              = "/aws/apigateway/${var.project_name}-api-${var.environment}"
+  retention_in_days = 7  # Logs retained for 7 days (cost optimization)
+
+  tags = var.tags
+}
+
+# IAM Role for API Gateway Logging
+resource "aws_iam_role" "api_gateway_cloudwatch" {
+  name = "${var.project_name}-api-gateway-cloudwatch-${var.environment}"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "apigateway.amazonaws.com"
+        }
+      }
+    ]
+  })
+
+  tags = var.tags
+}
+
+resource "aws_iam_role_policy_attachment" "api_gateway_cloudwatch" {
+  role       = aws_iam_role.api_gateway_cloudwatch.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
 }
 
 # Lambda Function
@@ -109,6 +141,30 @@ resource "aws_apigatewayv2_stage" "default" {
   api_id      = aws_apigatewayv2_api.main.id
   name        = "$default"
   auto_deploy = true
+
+  access_log_settings {
+    destination_arn = aws_cloudwatch_log_group.api_gateway.arn
+    format = jsonencode({
+      requestId      = "$context.requestId"
+      ip             = "$context.identity.sourceIp"
+      requestTime    = "$context.requestTime"
+      httpMethod     = "$context.httpMethod"
+      routeKey       = "$context.routeKey"
+      status         = "$context.status"
+      protocol       = "$context.protocol"
+      responseLength = "$context.responseLength"
+      errorMessage   = "$context.error.message"
+    })
+  }
+
+  # Ensure routes are created before stage deploys
+  depends_on = [
+    aws_apigatewayv2_route.repos,
+    aws_apigatewayv2_route.repo_detail,
+    aws_apigatewayv2_route.posts,
+    aws_apigatewayv2_route.videos,
+    aws_cloudwatch_log_group.api_gateway
+  ]
 }
 
 resource "aws_apigatewayv2_integration" "lambda" {
