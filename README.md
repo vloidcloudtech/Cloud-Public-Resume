@@ -1,324 +1,224 @@
 # Portfolio Aggregator
 
-Automated portfolio website that aggregates content from GitHub, Medium, and YouTube with AI-powered summaries.
+**Automated serverless portfolio website** that aggregates and displays content from GitHub, Medium, and YouTube with AI-generated summaries.
 
-## Features
+[![AWS](https://img.shields.io/badge/AWS-Serverless-orange)](https://aws.amazon.com/)
+[![Terraform](https://img.shields.io/badge/Terraform-Infrastructure-purple)](https://www.terraform.io/)
+[![React](https://img.shields.io/badge/React-Frontend-blue)](https://reactjs.org/)
 
-- 🤖 AI-generated repository summaries using Claude
-- 🔄 Automatic syncing every 12 hours via EventBridge
-- 📱 Fully responsive React frontend
-- ☁️ Serverless AWS architecture
-- 💰 Costs $1-3/month (mostly AI API usage)
+---
 
-## Architecture
+## ✨ Features
+
+- 🤖 **AI-Powered Summaries** - Automatic README summaries using Claude 3.5 Sonnet
+- 🔄 **Auto-Sync** - Content updates every 12 hours via EventBridge
+- 📱 **Responsive Design** - Mobile-first React frontend
+- ☁️ **Serverless Architecture** - 100% serverless on AWS
+- 💰 **Cost-Effective** - Runs for $3-8/month
+- 🚀 **CI/CD** - Automated deployments via GitHub Actions
+
+---
+
+## 🏗️ Architecture
 
 ```
-CloudFront (CDN)
-    ↓
-S3 (Static Frontend)
-    ↓
-API Gateway
-    ↓
-Lambda Functions → DynamoDB
-    ↓
-External APIs (GitHub, Medium, YouTube)
-    ↓
-AI Service (Claude via Anthropic API)
+┌─────────────┐
+│ CloudFront  │  CDN + SSL/TLS
+└──────┬──────┘
+       │
+┌──────▼──────┐
+│  S3 Bucket  │  React SPA
+└──────┬──────┘
+       │
+┌──────▼──────────┐
+│  API Gateway    │  HTTP API
+└──────┬──────────┘
+       │
+┌──────▼────────────────────────┐
+│  Lambda Functions             │
+│  ├── API Handler              │
+│  ├── GitHub Sync (+ Claude)   │
+│  ├── Medium Sync              │
+│  └── YouTube Sync             │
+└──────┬────────────────────────┘
+       │
+┌──────▼──────┐
+│  DynamoDB   │  NoSQL Database
+└─────────────┘
 ```
 
-## Prerequisites
+---
 
-- AWS Account with admin access
-- Terraform >= 1.0
+## 🚀 Quick Start
+
+### Prerequisites
+
+- AWS Account
+- Terraform >= 1.6
 - Node.js >= 18
 - Python >= 3.11
-- AWS CLI configured
 - GitHub Personal Access Token
 - YouTube Data API Key
-- Anthropic API Key (for Claude)
+- Anthropic API Key
 
-## Quick Start
-
-### 1. Clone the repository
+### 1. Clone Repository
 
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/yourusername/Cloud-Public-Resume.git
 cd Cloud-Public-Resume
 ```
 
-### 2. Set up AWS secrets and infrastructure
-
-```bash
-# Run the setup script
-chmod +x scripts/setup.sh
-./scripts/setup.sh
-```
-
-This will:
-- Check prerequisites
-- Configure AWS CLI
-- Create Secrets Manager secrets for API keys
-- Initialize Terraform
-
-### 3. Configure variables
-
-Copy and edit the Terraform variables file:
+### 2. Configure Variables
 
 ```bash
 cd terraform
 cp terraform.tfvars.example terraform.tfvars
+# Edit terraform.tfvars with your values
 ```
 
-Edit `terraform.tfvars` with your values:
+### 3. Set GitHub Secrets
 
-```hcl
-aws_region     = "us-east-1"
-environment    = "production"
-project_name   = "portfolio-aggregator"
+Required secrets for CI/CD:
+- `AWS_ACCESS_KEY_ID`
+- `AWS_SECRET_ACCESS_KEY`
+- `GH_PERSONAL_ACCESS_TOKEN`
+- `ANTHROPIC_API_KEY`
+- `YOUTUBE_API_KEY`
+- `GH_USERNAME`
+- `MEDIUM_USERNAME`
+- `YOUTUBE_CHANNEL_ID`
 
-github_username  = "your-github-username"
-medium_username  = "your-medium-username"
-youtube_channel_id = "your-youtube-channel-id"
-
-# These ARNs will be created by the setup script
-github_token_secret_arn   = "arn:aws:secretsmanager:us-east-1:YOUR_ACCOUNT:secret:portfolio-aggregator-github-token"
-youtube_api_key_secret_arn = "arn:aws:secretsmanager:us-east-1:YOUR_ACCOUNT:secret:portfolio-aggregator-youtube-key"
-ai_api_key_secret_arn     = "arn:aws:secretsmanager:us-east-1:YOUR_ACCOUNT:secret:portfolio-aggregator-ai-key"
-```
-
-### 4. Deploy infrastructure
+### 4. Deploy via GitHub Actions
 
 ```bash
-# Preview changes
-terraform plan
-
-# Apply infrastructure
-terraform apply
+git add .
+git commit -m "Initial deployment"
+git push origin main
 ```
 
-### 5. Build and deploy Lambda functions
+GitHub Actions will automatically:
+1. Build Lambda functions and layer
+2. Deploy infrastructure via Terraform
+3. Populate secrets
+4. Deploy frontend to S3/CloudFront
 
-```bash
-cd ../backend
-chmod +x deploy.sh
-./deploy.sh
-```
+---
 
-### 6. Build and deploy frontend
+## 📖 Documentation
 
-```bash
-cd ../frontend
+- **[DETAILED_DESCRIPTION.md](./DETAILED_DESCRIPTION.md)** - Complete technical documentation
+- **[CODE_IMPLEMENTATION.md](./CODE_IMPLEMENTATION.md)** - Code structure and implementation details
+- **[PROJECT_BREAKDOWN.md](./PROJECT_BREAKDOWN.md)** - Project analysis and breakdown
+- **[docs/guides/](./docs/guides/)** - Setup guides and troubleshooting
 
-# Copy environment variables
-cp .env.example .env
+---
 
-# Get your API endpoint from Terraform output
-cd ../terraform
-terraform output api_endpoint
+## 💰 Cost Breakdown
 
-# Edit frontend/.env and set VITE_API_URL to your API endpoint
-cd ../frontend
-nano .env
+**Monthly Costs:**
+- **Fixed**: $1.70/month
+  - Secrets Manager: $1.20 (3 secrets × $0.40)
+  - Route 53: $0.50 (hosted zone)
 
-# Install dependencies and build
-npm install
-npm run build
+- **Variable**: $0-6/month (depends on traffic)
+  - Lambda, DynamoDB, CloudFront (mostly free tier)
+  - CloudWatch Logs (7-day retention)
 
-# Deploy to S3
-chmod +x deploy.sh
-./deploy.sh
-```
+**Total Estimate**: $3-8/month
 
-### 7. Access your portfolio
+See [docs/guides/COST_MANAGEMENT.md](./docs/guides/COST_MANAGEMENT.md) for details.
 
-Get your CloudFront URL:
+---
 
-```bash
-cd ../terraform
-terraform output frontend_url
-```
+## 🛠️ Tech Stack
 
-Visit the URL to see your portfolio!
+**Infrastructure:**
+- Terraform (IaC)
+- AWS Lambda (Python 3.11)
+- DynamoDB (NoSQL)
+- API Gateway (HTTP API)
+- S3 + CloudFront
+- EventBridge (Scheduler)
+- Secrets Manager
+- CloudWatch Logs
 
-## Project Structure
+**Frontend:**
+- React 18
+- Vite
+- Axios
+- React Router
+
+**Backend:**
+- Python 3.11
+- Boto3 (AWS SDK)
+- Anthropic Claude API
+- GitHub API
+- Medium RSS Feed
+- YouTube Data API v3
+
+**CI/CD:**
+- GitHub Actions
+- Terraform Cloud (optional)
+
+---
+
+## 📁 Project Structure
 
 ```
 Cloud-Public-Resume/
-├── terraform/                  # Infrastructure as Code
-│   ├── main.tf
-│   ├── variables.tf
-│   ├── outputs.tf
-│   └── modules/
-│       ├── frontend/          # S3 + CloudFront
-│       ├── database/          # DynamoDB tables
-│       ├── api/               # API Gateway + Lambda
-│       └── sync/              # Sync Lambdas + EventBridge
-│
+├── .github/workflows/     # GitHub Actions CI/CD
 ├── backend/
-│   ├── shared/                # Shared Python modules
-│   │   ├── db_client.py
-│   │   └── api_clients.py
-│   └── lambda_functions/
-│       ├── github_sync/       # GitHub sync Lambda
-│       ├── medium_sync/       # Medium sync Lambda
-│       ├── youtube_sync/      # YouTube sync Lambda
-│       └── api_handler/       # API Gateway handler
-│
-├── frontend/                  # React application
-│   ├── src/
-│   │   ├── pages/            # Page components
-│   │   ├── services/         # API client
-│   │   └── styles/           # CSS styles
-│   └── public/
-│
-├── scripts/
-│   └── setup.sh              # Initial setup script
-│
-└── .github/
-    └── workflows/
-        └── deploy.yml        # CI/CD pipeline
+│   ├── lambda_functions/  # Lambda handlers
+│   ├── shared/           # Shared Python modules
+│   └── layer.zip         # Lambda layer
+├── frontend/             # React SPA
+├── terraform/            # Infrastructure as Code
+│   ├── modules/         # Terraform modules
+│   └── *.tf             # Root configuration
+├── scripts/             # Utility scripts
+├── docs/guides/         # Setup and troubleshooting guides
+└── README.md           # This file
 ```
 
-## Cost Breakdown
+---
 
-| Service | Monthly Cost |
-|---------|--------------|
-| S3 (Frontend) | FREE (within limits) |
-| CloudFront | FREE (within limits) |
-| Lambda | FREE (within limits) |
-| API Gateway | FREE (within limits) |
-| DynamoDB | FREE (within limits) |
-| Secrets Manager | $1.60 (4 secrets) |
-| AI API (Anthropic) | $1-3 (usage-based) |
-| **Total** | **$1-3/month** |
+## 🔧 Development
 
-## Manual Triggers
+### Local Testing
+
+```bash
+# Backend
+cd backend
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+pip install -r requirements.txt
+
+# Frontend
+cd frontend
+npm install
+npm run dev
+```
+
+### Manual Sync
 
 Trigger sync functions manually:
 
 ```bash
-# GitHub sync
+# Via GitHub Actions
+Go to Actions → Manual Sync Data → Run workflow
+
+# Or via AWS CLI
 aws lambda invoke --function-name portfolio-aggregator-github-sync-production output.json
-
-# Medium sync
-aws lambda invoke --function-name portfolio-aggregator-medium-sync-production output.json
-
-# YouTube sync
-aws lambda invoke --function-name portfolio-aggregator-youtube-sync-production output.json
 ```
-
-## Customization
-
-### Change sync frequency
-
-Edit `terraform/modules/sync/main.tf`:
-
-```hcl
-schedule_expression = "rate(6 hours)"  # Change from 12 hours to 6 hours
-```
-
-### Update frontend styling
-
-Edit `frontend/src/styles/index.css`
-
-### Modify AI prompts
-
-Edit `backend/lambda_functions/github_sync/handler.py` in the `generate_summaries` function
-
-## Troubleshooting
-
-### Lambda timeout errors
-
-Increase timeout in `terraform/modules/sync/main.tf`:
-
-```hcl
-timeout = 600  # Increase to 10 minutes
-```
-
-### API Gateway 502 errors
-
-Check Lambda logs:
-
-```bash
-aws logs tail /aws/lambda/portfolio-aggregator-api-production --follow
-```
-
-### CloudFront not updating
-
-Create cache invalidation:
-
-```bash
-aws cloudfront create-invalidation --distribution-id YOUR_DIST_ID --paths "/*"
-```
-
-## Monitoring
-
-View logs in CloudWatch:
-
-```bash
-# View API logs
-aws logs tail /aws/lambda/portfolio-aggregator-api-production --follow
-
-# View GitHub sync logs
-aws logs tail /aws/lambda/portfolio-aggregator-github-sync-production --follow
-```
-
-## CI/CD
-
-The project includes a GitHub Actions workflow that automatically deploys on push to main:
-
-1. Set up GitHub secrets:
-   - `AWS_ACCESS_KEY_ID`
-   - `AWS_SECRET_ACCESS_KEY`
-
-2. Push to main branch to trigger deployment
-
-## Cleanup
-
-To destroy all resources:
-
-```bash
-cd terraform
-terraform destroy
-```
-
-Delete secrets:
-
-```bash
-aws secretsmanager delete-secret --secret-id portfolio-aggregator-github-token
-aws secretsmanager delete-secret --secret-id portfolio-aggregator-youtube-key
-aws secretsmanager delete-secret --secret-id portfolio-aggregator-ai-key
-```
-
-## API Endpoints
-
-- `GET /api/repos` - List all GitHub repositories
-- `GET /api/repos/{id}` - Get single repository with summaries
-- `GET /api/posts` - List all Medium posts
-- `GET /api/videos` - List all YouTube videos
-
-## Security
-
-- All API keys stored in AWS Secrets Manager
-- HTTPS enforced via CloudFront
-- CORS configured for API Gateway
-- IAM roles with least privilege access
-
-## License
-
-MIT
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Submit a pull request
-
-## Support
-
-For issues and questions, please open a GitHub issue.
 
 ---
 
-Built with ❤️ using AWS Serverless Architecture
+
+
+## 📜 License
+
+MIT License - See [LICENSE](./LICENSE) for details
+
+---
+
+
