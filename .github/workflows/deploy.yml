@@ -226,6 +226,7 @@ jobs:
           echo "ai_secret_name=$(terraform output -raw ai_api_key_secret_name)" >> $GITHUB_OUTPUT
           echo "frontend_bucket_name=$(terraform output -raw frontend_bucket_name)" >> $GITHUB_OUTPUT
           echo "cloudfront_distribution_id=$(terraform output -raw cloudfront_distribution_id)" >> $GITHUB_OUTPUT
+          echo "api_endpoint=$(terraform output -raw api_endpoint)" >> $GITHUB_OUTPUT
 
   # --------------------------------------------------------------------------
   # Job 2: Populate AWS Secrets from GitHub Secrets
@@ -325,13 +326,14 @@ jobs:
         env:
           BUCKET_NAME: ${{ needs.terraform.outputs.frontend_bucket_name }}
           DIST_ID: ${{ needs.terraform.outputs.cloudfront_distribution_id }}
+          VITE_API_URL: ${{ needs.terraform.outputs.api_endpoint }}
         run: |
           cd frontend
 
           # Install dependencies
           npm install
 
-          # Build for production
+          # Build for production with API endpoint
           npm run build
 
           echo "✓ Frontend built successfully!"
