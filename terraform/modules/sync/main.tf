@@ -157,7 +157,10 @@ resource "aws_lambda_function" "medium_sync" {
 
   layers = [aws_lambda_layer_version.shared.arn]
 
-  depends_on = [aws_cloudwatch_log_group.medium_sync]
+  depends_on = [
+    aws_cloudwatch_log_group.medium_sync,
+    aws_lambda_function.github_sync  # Wait for github_sync to finish updating
+  ]
 
   tags = var.tags
 }
@@ -184,7 +187,10 @@ resource "aws_lambda_function" "youtube_sync" {
 
   layers = [aws_lambda_layer_version.shared.arn]
 
-  depends_on = [aws_cloudwatch_log_group.youtube_sync]
+  depends_on = [
+    aws_cloudwatch_log_group.youtube_sync,
+    aws_lambda_function.medium_sync  # Wait for medium_sync to finish updating
+  ]
 
   tags = var.tags
 }
