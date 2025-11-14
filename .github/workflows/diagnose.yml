@@ -1,0 +1,180 @@
+name: Diagnose Data Issue
+
+on:
+  workflow_dispatch:
+
+jobs:
+  diagnose:
+    name: Run Diagnostics
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Check Lambda Functions
+        run: |
+          echo "=========================================="
+          echo "CHECKING LAMBDA FUNCTIONS"
+          echo "=========================================="
+          echo ""
+
+          for func in portfolio-aggregator-github-sync-production portfolio-aggregator-medium-sync-production portfolio-aggregator-youtube-sync-production; do
+            echo "Function: $func"
+            aws lambda get-function --function-name $func --query 'Configuration.[FunctionName,Runtime,Layers,LastModified]' --output table
+            echo ""
+          done
+
+      - name: Check Recent Lambda Invocations
+        run: |
+          echo "=========================================="
+          echo "CHECKING CLOUDWATCH LOGS"
+          echo "=========================================="
+          echo ""
+
+          for func in portfolio-aggregator-github-sync-production portfolio-aggregator-medium-sync-production; do
+            echo "Recent logs for: $func"
+            LOG_GROUP="/aws/lambda/$func"
+
+            # Get latest log stream
+            LATEST_STREAM=$(aws logs describe-log-streams \
+              --log-group-name "$LOG_GROUP" \
+              --order-by LastEventTime \
+              --descending \
+              --max-items 1 \
+              --query 'logStreams[0].logStreamName' \
+              --output text 2>/dev/null || echo "")
+
+            if [ -n "$LATEST_STREAM" ] && [ "$LATEST_STREAM" != "None" ]; then
+              echo "Latest log stream: $LATEST_STREAM"
+              aws logs get-log-events \
+                --log-group-name "$LOG_GROUP" \
+                --log-stream-name "$LATEST_STREAM" \
+                --limit 50 \
+                --query 'events[*].message' \
+                --output text 2>/dev/null || echo "No logs found"
+            else
+              echo "⚠️  NO LOG STREAMS FOUND - Function has never been invoked!"
+            fi
+            echo ""
+            echo "---"
+            echo ""
+          done
+
+      - name: Check DynamoDB Tables
+        run: |
+          echo "=========================================="
+          echo "CHECKING DYNAMODB TABLES"
+          echo "=========================================="
+          echo ""
+
+          for table in portfolio-aggregator-github-repos-production portfolio-aggregator-medium-posts-production; do
+            echo "Table: $table"
+            ITEM_COUNT=$(aws dynamodb scan --table-name $table --select COUNT --query 'Count' --output text 2>/dev/null || echo "0")
+            echo "Item count: $ITEM_COUNT"
+
+            if [ "$ITEM_COUNT" -gt "0" ]; then
+              echo "Sample items:"
+              aws dynamodb scan --table-name $table --limit 1 --output json
+            fi
+            echo ""
+          done
+
+      - name: Check Secrets
+        run: |
+          echo "=========================================="
+          echo "CHECKING SECRETS MANAGER"
+          echo "=========================================="
+          echo ""
+
+          for secret in portfolio-aggregator-github-token-production portfolio-aggregator-ai-key-production; do
+            echo "Secret: $secret"
+            VALUE=$(aws secretsmanager get-secret-value --secret-id $secret --query 'SecretString' --output text 2>/dev/null || echo "NOT FOUND")
+
+            if [[ "$VALUE" == *"PLACEHOLDER"* ]]; then
+              echo "⚠️  SECRET CONTAINS PLACEHOLDER - NOT POPULATED!"
+            elif [ "$VALUE" == "NOT FOUND" ]; then
+              echo "❌ SECRET NOT FOUND"
+            else
+              echo "✅ Secret exists and appears populated (length: ${#VALUE} chars)"
+            fi
+            echo ""
+          done
+
+      - name: Check EventBridge Rules
+        run: |
+          echo "=========================================="
+          echo "CHECKING EVENTBRIDGE RULES"
+          echo "=========================================="
+          echo ""
+
+          for rule in portfolio-aggregator-github-sync-production portfolio-aggregator-medium-sync-production; do
+            echo "Rule: $rule"
+            aws events describe-rule --name $rule --query '[Name,State,ScheduleExpression]' --output table 2>/dev/null || echo "Rule not found"
+            echo ""
+          done
+
+      - name: Test GitHub Sync Function
+        run: |
+          echo "=========================================="
+          echo "TESTING GITHUB SYNC FUNCTION"
+          echo "=========================================="
+          echo ""
+
+          aws lambda invoke \
+            --function-name portfolio-aggregator-github-sync-production \
+            --cli-binary-format raw-in-base64-out \
+            --payload '{}' \
+            --log-type Tail \
+            response.json 2>&1 | tee invoke-output.txt
+
+          echo ""
+          echo "Response:"
+          cat response.json | jq '.' || cat response.json
+          echo ""
+
+          echo "Function logs (base64 decoded):"
+          grep "LogResult" invoke-output.txt | sed 's/.*LogResult": "//' | sed 's/".*//' | base64 -d || echo "No logs"
+
+      - name: Test Medium Sync Function
+        run: |
+          echo "=========================================="
+          echo "TESTING MEDIUM SYNC FUNCTION"
+          echo "=========================================="
+          echo ""
+
+          aws lambda invoke \
+            --function-name portfolio-aggregator-medium-sync-production \
+            --cli-binary-format raw-in-base64-out \
+            --payload '{}' \
+            --log-type Tail \
+            response2.json 2>&1 | tee invoke-output2.txt
+
+          echo ""
+          echo "Response:"
+          cat response2.json | jq '.' || cat response2.json
+          echo ""
+
+          echo "Function logs (base64 decoded):"
+          grep "LogResult" invoke-output2.txt | sed 's/.*LogResult": "//' | sed 's/".*//' | base64 -d || echo "No logs"
+
+      - name: Summary
+        if: always()
+        run: |
+          echo ""
+          echo "=========================================="
+          echo "DIAGNOSTIC SUMMARY"
+          echo "=========================================="
+          echo ""
+          echo "Check the logs above for:"
+          echo "  1. ⚠️  Functions with no log streams = Never invoked"
+          echo "  2. ⚠️  Secrets with PLACEHOLDER = Not populated"
+          echo "  3. ❌ ModuleNotFoundError = Layer not attached"
+          echo "  4. ❌ AccessDeniedException = IAM permissions issue"
+          echo "  5. ✅ statusCode 200 = Success"
+          echo ""
+          echo "Next steps will depend on what errors we find."
