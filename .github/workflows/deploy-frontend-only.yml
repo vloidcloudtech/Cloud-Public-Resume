@@ -40,7 +40,8 @@ jobs:
         id: get-infra
         run: |
           BUCKET=$(aws s3api list-buckets --query "Buckets[?contains(Name, 'portfolio-aggregator-frontend')].Name | [0]" --output text)
-          DIST_ID=$(aws cloudfront list-distributions --query "DistributionList.Items[?Comment=='portfolio-aggregator-frontend-production'].Id | [0]" --output text)
+          DIST_ID=$(aws cloudfront list-distributions --query "DistributionList.Items[?Comment=='Portfolio Aggregator - production'].Id | [0]" --output text)
+
           echo "BUCKET=${BUCKET}" >> $GITHUB_OUTPUT
           echo "DIST_ID=${DIST_ID}" >> $GITHUB_OUTPUT
           echo "Found bucket: ${BUCKET}"
