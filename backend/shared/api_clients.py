@@ -1,7 +1,13 @@
 import requests
 import base64
 import feedparser
-from googleapiclient.discovery import build
+
+# Conditional import - only needed for YouTubeClient
+try:
+    from googleapiclient.discovery import build
+except ImportError:
+    # Google API client not installed - YouTubeClient won't work but other clients will
+    build = None
 
 class GitHubClient:
     def __init__(self, token):
