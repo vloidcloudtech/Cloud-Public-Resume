@@ -30,7 +30,7 @@ import os
 import boto3
 import hashlib
 import time
-from anthropic import Anthropic
+import requests
 
 # ============================================================================
 # Import Shared Modules from Lambda Layer
@@ -84,15 +84,7 @@ def generate_summaries(readme_content, ai_api_key):
         - Falls back to error message if API call fails
         - Model: claude-3-5-sonnet-20241022 (latest Sonnet version)
     """
-    # Initialize Anthropic client without proxy settings for Lambda
-    client = Anthropic(
-        api_key=ai_api_key,
-        max_retries=2,
-        timeout=30.0
-    )
-
     # Construct the prompt for Claude
-    # We ask for JSON output to make parsing easier and more reliable
     prompt = f"""Analyze this README and provide two summaries:
 1. A one-sentence high-level summary
 2. A detailed 2-3 sentence technical summary
@@ -105,15 +97,30 @@ Respond in JSON format:
 """
 
     try:
-        # Call Claude API to generate summaries
-        message = client.messages.create(
-            model="claude-3-5-sonnet-20241022",  # Claude 3.5 Sonnet model
-            max_tokens=1024,                      # Limit response length
-            messages=[{"role": "user", "content": prompt}]
+        # Call Claude API directly using requests to avoid SDK issues
+        headers = {
+            "x-api-key": ai_api_key,
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json"
+        }
+
+        payload = {
+            "model": "claude-3-5-sonnet-20241022",
+            "max_tokens": 1024,
+            "messages": [{"role": "user", "content": prompt}]
+        }
+
+        response = requests.post(
+            "https://api.anthropic.com/v1/messages",
+            headers=headers,
+            json=payload,
+            timeout=30
         )
+        response.raise_for_status()
 
         # Parse the JSON response
-        result = json.loads(message.content[0].text)
+        message = response.json()
+        result = json.loads(message['content'][0]['text'])
         return result.get('high_level', ''), result.get('detailed', '')
 
     except Exception as e:
