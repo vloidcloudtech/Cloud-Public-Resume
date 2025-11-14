@@ -118,7 +118,17 @@ jobs:
           echo "Building shared layer..."
           cd shared
           mkdir -p python
+
+          # Install dependencies into python directory
+          if [ -f requirements.txt ]; then
+            echo "Installing layer dependencies..."
+            pip install -r requirements.txt -t python/ --quiet
+          fi
+
+          # Copy shared Python modules
           cp *.py python/
+
+          # Create layer zip
           zip -r ../layer.zip python -q
           rm -rf python
           cd ..
