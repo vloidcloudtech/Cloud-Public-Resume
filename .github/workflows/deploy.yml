@@ -117,12 +117,12 @@ jobs:
           # Install dependencies into python directory
           if [ -f requirements.txt ]; then
             echo "Installing layer dependencies..."
-            # Install lightweight packages first
-            pip install requests==2.31.0 feedparser==6.0.10 anthropic==0.34.0 -t python/ --quiet
+            # Install lightweight packages first (with --no-cache-dir to force fresh install)
+            pip install requests==2.31.0 feedparser==6.0.10 anthropic==0.34.0 -t python/ --no-cache-dir --upgrade --quiet
 
             # Install Google API client with minimal dependencies to reduce size
-            pip install google-api-python-client==2.108.0 -t python/ --no-deps --quiet
-            pip install google-auth==2.23.4 google-auth-httplib2==0.1.1 httplib2==0.22.0 uritemplate==4.1.1 google-api-core==2.14.0 googleapis-common-protos==1.61.0 protobuf==4.25.1 -t python/ --quiet
+            pip install google-api-python-client==2.108.0 -t python/ --no-deps --no-cache-dir --quiet
+            pip install google-auth==2.23.4 google-auth-httplib2==0.1.1 httplib2==0.22.0 uritemplate==4.1.1 google-api-core==2.14.0 googleapis-common-protos==1.61.0 protobuf==4.25.1 -t python/ --no-cache-dir --quiet
           fi
 
           # Copy shared Python modules
