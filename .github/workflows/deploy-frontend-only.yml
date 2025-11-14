@@ -1,0 +1,68 @@
+name: Deploy Frontend Only
+
+on:
+  workflow_dispatch:
+
+env:
+  AWS_REGION: us-east-1
+
+jobs:
+  deploy-frontend:
+    name: Rebuild and Deploy Frontend
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Get API Endpoint from AWS
+        id: get-api
+        run: |
+          # Get API Gateway URL directly from AWS
+          API_ID=$(aws apigatewayv2 get-apis --query "Items[?Name=='portfolio-aggregator-api-production'].ApiId" --output text)
+          API_ENDPOINT="https://${API_ID}.execute-api.us-east-1.amazonaws.com"
+          echo "API_ENDPOINT=${API_ENDPOINT}" >> $GITHUB_OUTPUT
+          echo "Found API endpoint: ${API_ENDPOINT}"
+
+      - name: Get S3 Bucket and CloudFront ID
+        id: get-infra
+        run: |
+          BUCKET=$(aws s3api list-buckets --query "Buckets[?contains(Name, 'portfolio-aggregator-frontend')].Name" --output text | head -1)
+          DIST_ID=$(aws cloudfront list-distributions --query "DistributionList.Items[?Comment=='portfolio-aggregator-frontend-production'].Id" --output text)
+          echo "BUCKET=${BUCKET}" >> $GITHUB_OUTPUT
+          echo "DIST_ID=${DIST_ID}" >> $GITHUB_OUTPUT
+          echo "Found bucket: ${BUCKET}"
+          echo "Found distribution: ${DIST_ID}"
+
+      - name: Build and Deploy Frontend
+        env:
+          VITE_API_URL: ${{ steps.get-api.outputs.API_ENDPOINT }}
+        run: |
+          cd frontend
+          echo "Building with API URL: $VITE_API_URL"
+
+          npm install
+          npm run build
+
+          echo "Deploying to S3..."
+          aws s3 sync dist/ s3://${{ steps.get-infra.outputs.BUCKET }} --delete
+
+          echo "Invalidating CloudFront cache..."
+          aws cloudfront create-invalidation \
+            --distribution-id ${{ steps.get-infra.outputs.DIST_ID }} \
+            --paths "/*"
+
+          echo "✅ Frontend deployed successfully!"
+          echo "Your website should update in 1-2 minutes"
