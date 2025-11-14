@@ -142,6 +142,46 @@ jobs:
           cd terraform
           terraform init
 
+      - name: Cleanup Duplicate API Gateways
+        if: github.ref == 'refs/heads/main'
+        run: |
+          echo "Checking for duplicate API Gateways..."
+
+          # Get all API Gateway IDs with the production name
+          API_IDS=$(aws apigatewayv2 get-apis --query "Items[?Name=='portfolio-aggregator-api-production'].ApiId" --output text)
+
+          if [ -z "$API_IDS" ]; then
+            echo "No API Gateways found - will be created by Terraform"
+            exit 0
+          fi
+
+          # Count how many APIs exist
+          API_COUNT=$(echo "$API_IDS" | wc -w)
+          echo "Found $API_COUNT API Gateway(s) named 'portfolio-aggregator-api-production'"
+
+          if [ "$API_COUNT" -eq 1 ]; then
+            echo "Only one API Gateway exists - no cleanup needed"
+            exit 0
+          fi
+
+          # Multiple APIs found - keep the newest one (most likely managed by Terraform)
+          echo "Multiple API Gateways found - keeping newest and deleting duplicates"
+
+          # Get APIs with creation dates
+          APIS=$(aws apigatewayv2 get-apis --query "Items[?Name=='portfolio-aggregator-api-production'].[ApiId,CreatedDate]" --output text | sort -k2 -r)
+
+          # Keep the first one (newest), delete the rest
+          KEEP_API=$(echo "$APIS" | head -1 | awk '{print $1}')
+          echo "Keeping API: $KEEP_API (newest)"
+
+          # Delete all others
+          echo "$APIS" | tail -n +2 | while read -r api_id created_date; do
+            echo "Deleting duplicate API: $api_id (created: $created_date)"
+            aws apigatewayv2 delete-api --api-id "$api_id" || echo "  Failed to delete $api_id (may be in use)"
+          done
+
+          echo "Cleanup complete"
+
       - name: Import Existing Resources
         if: github.ref == 'refs/heads/main'
         continue-on-error: true
@@ -170,6 +210,15 @@ jobs:
           # Import Route 53 DNS records
           terraform import 'module.frontend.aws_route53_record.frontend' Z0393886EJ0V2CL9B9Y0_vloidcloudtech.com_A 2>/dev/null || echo "  route53 A record (root): skipped"
           terraform import 'module.frontend.aws_route53_record.frontend_www' Z0393886EJ0V2CL9B9Y0_www.vloidcloudtech.com_A 2>/dev/null || echo "  route53 A record (www): skipped"
+
+          # Import API Gateway (if exists after cleanup)
+          API_ID=$(aws apigatewayv2 get-apis --query "Items[?Name=='portfolio-aggregator-api-production'].ApiId | [0]" --output text 2>/dev/null || echo "")
+          if [ -n "$API_ID" ] && [ "$API_ID" != "None" ]; then
+            echo "  Found API Gateway: $API_ID"
+            terraform import module.api.aws_apigatewayv2_api.main $API_ID 2>/dev/null || echo "  api gateway: skipped"
+          else
+            echo "  api gateway: not found, will be created"
+          fi
 
           # Import IAM roles
           terraform import module.api.aws_iam_role.api_lambda portfolio-aggregator-api-lambda-role-production 2>/dev/null || echo "  api lambda role: skipped"
