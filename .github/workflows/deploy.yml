@@ -185,6 +185,26 @@ jobs:
 
           echo "Import complete"
 
+      - name: Update Lambda Function Code
+        if: github.ref == 'refs/heads/main'
+        continue-on-error: true
+        run: |
+          echo "Updating Lambda function code with smaller packages..."
+          cd backend/lambda_functions
+
+          # Update each function's code directly via AWS CLI
+          for func in github_sync medium_sync youtube_sync api_handler; do
+            FUNCTION_NAME="portfolio-aggregator-${func/_/-}-production"
+            echo "Updating $FUNCTION_NAME..."
+            aws lambda update-function-code \
+              --function-name "$FUNCTION_NAME" \
+              --zip-file "fileb://$func/deployment.zip" \
+              2>/dev/null && echo "  ✓ Updated $FUNCTION_NAME" || echo "  ⚠ Skipped $FUNCTION_NAME"
+          done
+
+          echo "Waiting 5 seconds for updates to complete..."
+          sleep 5
+
       - name: Terraform Plan
         run: |
           cd terraform
