@@ -118,7 +118,7 @@ jobs:
           if [ -f requirements.txt ]; then
             echo "Installing layer dependencies..."
             # Install lightweight packages first
-            pip install requests==2.31.0 feedparser==6.0.10 anthropic==0.8.1 -t python/ --quiet
+            pip install requests==2.31.0 feedparser==6.0.10 anthropic==0.34.0 -t python/ --quiet
 
             # Install Google API client with minimal dependencies to reduce size
             pip install google-api-python-client==2.108.0 -t python/ --no-deps --quiet
